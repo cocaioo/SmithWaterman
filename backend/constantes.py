@@ -1,3 +1,5 @@
+"""Constantes usadas no calculo e traceback dos alinhamentos."""
+
 PONTEIRO_PARAR = 0
 PONTEIRO_ESQUERDA = 1
 PONTEIRO_DIAGONAL = 2
@@ -6,4 +8,7 @@ PONTEIRO_ESQUERDA_DIAGONAL = 4
 PONTEIRO_ESQUERDA_CIMA = 5
 PONTEIRO_DIAGONAL_CIMA = 6
 PONTEIRO_TODOS = 7
+
 TOLERANCIA = 1e-9
+
+PREFERENCIA_DIRECOES = ('diagonal', 'cima', 'esquerda')

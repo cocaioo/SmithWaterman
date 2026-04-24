@@ -1,20 +1,76 @@
-import numpy as np
+"""Rotinas de traceback e montagem dos alinhamentos finais."""
 
+from typing import Literal
+
+import numpy as np
+from numpy.typing import NDArray
+
+from .constantes import PREFERENCIA_DIRECOES
 from .ponteiros import escolher_direcao_traceback, mesmo_score
+
+Direcao = Literal['esquerda', 'diagonal', 'cima']
+MatrizNumerica = NDArray[np.float64]
+
+
+def _indice_vertical(sequencia_vertical: str, linha: int) -> int:
+    return len(sequencia_vertical) - 1 - linha
+
+
+def _indice_horizontal(coluna: int) -> int:
+    return coluna - 1
+
+
+def _coletar_candidatos_fallback(
+    matriz_scores: MatrizNumerica,
+    linha: int,
+    coluna: int,
+) -> list[tuple[Direcao, float]]:
+    ultima_linha = matriz_scores.shape[0] - 1
+    candidatos: list[tuple[Direcao, float]] = []
+
+    if coluna - 1 >= 0:
+        candidatos.append(('esquerda', float(matriz_scores[linha, coluna - 1])))
+
+    if linha + 1 <= ultima_linha and coluna - 1 >= 0:
+        candidatos.append(('diagonal', float(matriz_scores[linha + 1, coluna - 1])))
+
+    if linha + 1 <= ultima_linha:
+        candidatos.append(('cima', float(matriz_scores[linha + 1, coluna])))
+
+    return candidatos
+
+
+def _escolher_direcao_fallback(candidatos: list[tuple[Direcao, float]]) -> Direcao | None:
+    if not candidatos:
+        return None
+
+    maior_valor_vizinho = max(valor for _, valor in candidatos)
+    melhores_direcoes = [
+        direcao
+        for direcao, valor in candidatos
+        if mesmo_score(valor, maior_valor_vizinho)
+    ]
+
+    for direcao_preferencial in PREFERENCIA_DIRECOES:
+        if direcao_preferencial in melhores_direcoes:
+            return direcao_preferencial
+
+    return melhores_direcoes[0]
 
 
 def construir_alinhamento_da_posicao(
-    matriz_scores,
-    matriz_ponteiros,
-    sequencia_vertical,
-    sequencia_horizontal,
-    linha_inicio,
-    coluna_inicio,
-    parar_em_zero,
-    completar_bordas,
-):
-    alinhada_vertical = []
-    alinhada_horizontal = []
+    matriz_scores: MatrizNumerica,
+    matriz_ponteiros: NDArray[np.int_],
+    sequencia_vertical: str,
+    sequencia_horizontal: str,
+    linha_inicio: int,
+    coluna_inicio: int,
+    parar_em_zero: bool,
+    completar_bordas: bool,
+) -> tuple[str, str]:
+    """Rastreia o caminho de uma posicao inicial e monta duas sequencias alinhadas."""
+    alinhada_vertical: list[str] = []
+    alinhada_horizontal: list[str] = []
 
     linha = linha_inicio
     coluna = coluna_inicio
@@ -30,7 +86,8 @@ def construir_alinhamento_da_posicao(
         if coluna == 0:
             if not completar_bordas:
                 break
-            indice_vertical = (len(sequencia_vertical) - 1) - linha
+
+            indice_vertical = _indice_vertical(sequencia_vertical, linha)
             alinhada_vertical.append(sequencia_vertical[indice_vertical])
             alinhada_horizontal.append('-')
             linha += 1
@@ -39,7 +96,8 @@ def construir_alinhamento_da_posicao(
         if linha == ultima_linha:
             if not completar_bordas:
                 break
-            indice_horizontal = coluna - 1
+
+            indice_horizontal = _indice_horizontal(coluna)
             alinhada_vertical.append('-')
             alinhada_horizontal.append(sequencia_horizontal[indice_horizontal])
             coluna -= 1
@@ -52,35 +110,15 @@ def construir_alinhamento_da_posicao(
             if not completar_bordas:
                 break
 
-            candidatos_fallback = []
+            direcao = _escolher_direcao_fallback(
+                _coletar_candidatos_fallback(matriz_scores, linha, coluna),
+            )
 
-            if coluna - 1 >= 0:
-                candidatos_fallback.append(('esquerda', matriz_scores[linha, coluna - 1]))
-
-            if linha + 1 <= ultima_linha and coluna - 1 >= 0:
-                candidatos_fallback.append(('diagonal', matriz_scores[linha + 1, coluna - 1]))
-
-            if linha + 1 <= ultima_linha:
-                candidatos_fallback.append(('cima', matriz_scores[linha + 1, coluna]))
-
-            if not candidatos_fallback:
+            if direcao is None:
                 break
 
-            maior_valor_vizinho = max(valor for _, valor in candidatos_fallback)
-            melhores_direcoes = [
-                direcao_fallback
-                for direcao_fallback, valor in candidatos_fallback
-                if mesmo_score(valor, maior_valor_vizinho)
-            ]
-
-            direcao = melhores_direcoes[0]
-            for direcao_preferencial in ('diagonal', 'cima', 'esquerda'):
-                if direcao_preferencial in melhores_direcoes:
-                    direcao = direcao_preferencial
-                    break
-
-        indice_vertical = (len(sequencia_vertical) - 1) - linha
-        indice_horizontal = coluna - 1
+        indice_vertical = _indice_vertical(sequencia_vertical, linha)
+        indice_horizontal = _indice_horizontal(coluna)
 
         if direcao == 'diagonal':
             alinhada_vertical.append(sequencia_vertical[indice_vertical])
@@ -101,27 +139,38 @@ def construir_alinhamento_da_posicao(
     return ''.join(alinhada_vertical), ''.join(alinhada_horizontal)
 
 
-def encontrar_melhor_posicao_local(matriz_score_local):
-    melhor_posicao = np.unravel_index(np.argmax(matriz_score_local), matriz_score_local.shape)
-    return int(melhor_posicao[0]), int(melhor_posicao[1])
+def encontrar_melhor_posicao_local(matriz_score_local: MatrizNumerica) -> tuple[int, int]:
+    """Retorna a coordenada da celula com maior score local."""
+    linha, coluna = np.unravel_index(np.argmax(matriz_score_local), matriz_score_local.shape)
+    return int(linha), int(coluna)
 
 
-def alinhamento_global(matriz_score_global, matriz_ponteiro_global, sequencia_vertical, sequencia_horizontal):
-    linha_inicio = 0
-    coluna_inicio = matriz_score_global.shape[1] - 1
+def alinhamento_global(
+    matriz_score_global: MatrizNumerica,
+    matriz_ponteiro_global: NDArray[np.int_],
+    sequencia_vertical: str,
+    sequencia_horizontal: str,
+) -> tuple[str, str]:
+    """Monta o alinhamento global completo."""
     return construir_alinhamento_da_posicao(
         matriz_score_global,
         matriz_ponteiro_global,
         sequencia_vertical,
         sequencia_horizontal,
-        linha_inicio,
-        coluna_inicio,
+        linha_inicio=0,
+        coluna_inicio=matriz_score_global.shape[1] - 1,
         parar_em_zero=False,
         completar_bordas=True,
     )
 
 
-def alinhamento_local(matriz_score_local, matriz_ponteiro_local, sequencia_vertical, sequencia_horizontal):
+def alinhamento_local(
+    matriz_score_local: MatrizNumerica,
+    matriz_ponteiro_local: NDArray[np.int_],
+    sequencia_vertical: str,
+    sequencia_horizontal: str,
+) -> tuple[str, str]:
+    """Monta alinhamento local a partir da melhor celula da matriz local."""
     linha_inicio, coluna_inicio = encontrar_melhor_posicao_local(matriz_score_local)
     return construir_alinhamento_da_posicao(
         matriz_score_local,
@@ -135,7 +184,13 @@ def alinhamento_local(matriz_score_local, matriz_ponteiro_local, sequencia_verti
     )
 
 
-def alinhamento_melhor_score(matriz_score_local, matriz_ponteiro_local, sequencia_vertical, sequencia_horizontal):
+def alinhamento_melhor_score(
+    matriz_score_local: MatrizNumerica,
+    matriz_ponteiro_local: NDArray[np.int_],
+    sequencia_vertical: str,
+    sequencia_horizontal: str,
+) -> tuple[str, str, float]:
+    """Retorna o alinhamento local e o melhor score associado."""
     linha_inicio, coluna_inicio = encontrar_melhor_posicao_local(matriz_score_local)
     melhor_score = float(matriz_score_local[linha_inicio, coluna_inicio])
 
@@ -149,18 +204,18 @@ def alinhamento_melhor_score(matriz_score_local, matriz_ponteiro_local, sequenci
         parar_em_zero=False,
         completar_bordas=True,
     )
-
     return alinhada_vertical, alinhada_horizontal, melhor_score
 
 
 def rastrear_caminho(
-    matriz_score_local,
-    matriz_ponteiro_local,
-    sequencia_vertical,
-    sequencia_horizontal,
-    matriz_score_global=None,
-    matriz_ponteiro_global=None,
-):
+    matriz_score_local: MatrizNumerica,
+    matriz_ponteiro_local: NDArray[np.int_],
+    sequencia_vertical: str,
+    sequencia_horizontal: str,
+    matriz_score_global: MatrizNumerica | None = None,
+    matriz_ponteiro_global: NDArray[np.int_] | None = None,
+) -> dict[str, str | float]:
+    """Consolida alinhamentos global/local e o melhor score em um unico dicionario."""
     if matriz_score_global is not None and matriz_ponteiro_global is not None:
         vertical_global, horizontal_global = alinhamento_global(
             matriz_score_global,

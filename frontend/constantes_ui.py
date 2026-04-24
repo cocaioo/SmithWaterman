@@ -1,3 +1,5 @@
+"""Constantes visuais e dimensoes da interface pygame."""
+
 LARGURA_JANELA = 1280
 ALTURA_JANELA = 820
 FPS = 60
