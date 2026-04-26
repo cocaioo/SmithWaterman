@@ -1,6 +1,6 @@
 # Smith-Waterman (Python)
 
-Implementacao do algoritmo de Smith-Waterman desenvolvida na disciplina de Bioinformatica da UFPI, com versao em terminal e interface grafica (Pygame).
+Implementacao do algoritmo de Smith-Waterman desenvolvida na disciplina de Bioinformatica da UFPI, com execucao unificada pelo arquivo main.py.
 
 ## O que este projeto faz
 
@@ -16,27 +16,19 @@ Implementacao do algoritmo de Smith-Waterman desenvolvida na disciplina de Bioin
 
 ```text
 Smith-Waterman/
-	main.py                  # entrypoint backend (terminal)
-	front-end.py             # entrypoint UI (Pygame)
+	main.py                  # entrypoint unico (ui e terminal)
 	input.txt                # entrada padrao
 	readme.md
 
 	backend/
 		__init__.py
-		constantes.py          # constantes de ponteiro e tolerancia
 		io_entrada.py          # leitura e parsing da entrada
-		matriz.py              # construcao de matrizes e scores candidatos
-		ponteiros.py           # codificacao/decodificacao e escolha de direcao
-		alinhamento.py         # traceback e montagem dos alinhamentos
-		suite.py               # orquestracao do pipeline de alinhamento
+		alinhamento.py         # algoritmo completo (matrizes, ponteiros, traceback e suite)
 
 	frontend/
 		__init__.py
-		aplicacao.py           # classe principal da UI
-		widgets.py             # campo de entrada e botao
-		constantes_ui.py       # cores, dimensoes e FPS
-		formatacao.py          # renderizacao de matrizes em texto
-		padroes.py             # carga de valores padrao (input.txt)
+		aplicacao.py           # UI completa (constantes, widgets, formatacao e tela)
+		front-end.py           # atalho opcional para UI
 ```
 
 ## Requisitos
@@ -54,7 +46,7 @@ pip install numpy pygame
 
 ## Como executar
 
-### 1) Backend no terminal
+### 1) Interface grafica (padrao)
 
 ```bash
 python main.py
@@ -66,16 +58,22 @@ No Windows, se necessario:
 py main.py
 ```
 
-### 2) Interface grafica
+### 2) Modo terminal
 
 ```bash
-python front-end.py
+python main.py --modo terminal
 ```
 
-No Windows, se necessario:
+Com arquivo customizado:
 
 ```bash
-py front-end.py
+python main.py --modo terminal --entrada input.txt
+```
+
+### 3) Atalho legado para UI (opcional)
+
+```bash
+python frontend/front-end.py
 ```
 
 ## Formato do input.txt
@@ -100,5 +98,6 @@ TTGA
 
 ## Observacoes
 
-- [main.py](main.py) e [front-end.py](front-end.py) foram mantidos como entrypoints para facilitar execucao.
-- A logica principal foi modularizada em [backend/](backend) e [frontend/](frontend) para melhorar legibilidade e manutencao.
+- [main.py](main.py) e o entrypoint principal e unificado para todos os modos.
+- [frontend/front-end.py](frontend/front-end.py) foi mantido apenas como atalho de compatibilidade para a UI.
+- A estrutura foi simplificada para manter somente modulos com responsabilidade clara e leitura linear.

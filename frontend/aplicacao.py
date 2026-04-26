@@ -1,25 +1,181 @@
-"""Aplicacao pygame para executar e visualizar o algoritmo Smith-Waterman."""
+"""Interface pygame completa do projeto em um unico arquivo."""
 
 import sys
+from typing import Literal
 
+import numpy as np
+from numpy.typing import NDArray
 import pygame
 
 import backend
-from .constantes_ui import (
-    ALTURA_JANELA,
-    COR_BORDA_INPUT,
-    COR_ERRO,
-    COR_FUNDO,
-    COR_PAINEL,
-    COR_SUCESSO,
-    COR_TEXTO,
-    COR_TEXTO_SECUNDARIO,
-    FPS,
-    LARGURA_JANELA,
-)
-from .formatacao import matriz_para_linhas
-from .padroes import carregar_padroes
-from .widgets import Botao, CampoEntrada
+
+LARGURA_JANELA = 1280
+ALTURA_JANELA = 820
+FPS = 60
+
+COR_FUNDO = (22, 24, 29)
+COR_PAINEL = (30, 33, 40)
+COR_INPUT_FUNDO = (18, 20, 26)
+COR_BORDA_INPUT = (90, 95, 110)
+COR_INPUT_ATIVO = (90, 160, 255)
+COR_TEXTO = (232, 236, 245)
+COR_TEXTO_SECUNDARIO = (170, 178, 196)
+COR_BOTAO = (52, 115, 224)
+COR_BOTAO_HOVER = (70, 134, 240)
+COR_TEXTO_BOTAO = (245, 248, 255)
+COR_ERRO = (235, 90, 90)
+COR_SUCESSO = (95, 201, 124)
+
+PADROES_FALLBACK = {
+    'sequencia_vertical': 'AATG',
+    'sequencia_horizontal': 'TTGA',
+    'penalidade_gap': '-2',
+    'penalidade_mismatch': '-1',
+    'pontuacao_match': '1',
+}
+
+AcaoCampo = Literal['tab', 'enter']
+
+
+def _formatar_linha_inteira(linha: NDArray[np.generic]) -> str:
+    return ' '.join(f'{int(valor):4d}' for valor in linha)
+
+
+def _formatar_linha_decimal(linha: NDArray[np.generic]) -> str:
+    return ' '.join(f'{float(valor):7.1f}' for valor in linha)
+
+
+def matriz_para_linhas(matriz: NDArray[np.generic]) -> list[str]:
+    linhas_formatadas: list[str] = []
+
+    if np.issubdtype(matriz.dtype, np.integer):
+        for linha in matriz:
+            linhas_formatadas.append(_formatar_linha_inteira(linha))
+        return linhas_formatadas
+
+    for linha in matriz:
+        linhas_formatadas.append(_formatar_linha_decimal(linha))
+    return linhas_formatadas
+
+
+def carregar_padroes(caminho_entrada: str = 'input.txt') -> dict[str, str]:
+    try:
+        linhas_entrada = backend.abrir_arquivo(caminho_entrada)
+        (
+            sequencia_vertical,
+            sequencia_horizontal,
+            penalidade_gap,
+            penalidade_mismatch,
+            pontuacao_match,
+        ) = backend.parsear_entrada(linhas_entrada)
+
+        return {
+            'sequencia_vertical': sequencia_vertical,
+            'sequencia_horizontal': sequencia_horizontal,
+            'penalidade_gap': str(penalidade_gap),
+            'penalidade_mismatch': str(penalidade_mismatch),
+            'pontuacao_match': str(pontuacao_match),
+        }
+    except (FileNotFoundError, IndexError, ValueError):
+        return PADROES_FALLBACK.copy()
+
+
+class CampoEntrada:
+    def __init__(
+        self,
+        rotulo: str,
+        texto: str,
+        retangulo: tuple[int, int, int, int],
+        numerico: bool = False,
+    ) -> None:
+        self.rotulo = rotulo
+        self.texto = texto
+        self.retangulo = pygame.Rect(retangulo)
+        self.numerico = numerico
+        self.ativo = False
+
+    def tratar_evento(self, evento: pygame.event.Event) -> AcaoCampo | None:
+        if evento.type == pygame.MOUSEBUTTONDOWN:
+            self.ativo = self.retangulo.collidepoint(evento.pos)
+
+        if evento.type != pygame.KEYDOWN or not self.ativo:
+            return None
+
+        return self._tratar_evento_teclado(evento)
+
+    def _tratar_evento_teclado(self, evento: pygame.event.Event) -> AcaoCampo | None:
+        if evento.key == pygame.K_BACKSPACE:
+            self.texto = self.texto[:-1]
+            return None
+
+        if evento.key == pygame.K_TAB:
+            return 'tab'
+
+        if evento.key == pygame.K_RETURN:
+            return 'enter'
+
+        caractere = evento.unicode
+        if not caractere:
+            return None
+
+        if self.numerico:
+            if self._pode_adicionar_caractere_numerico(caractere):
+                self.texto += caractere
+            return None
+
+        if caractere.isalpha():
+            self.texto += caractere.upper()
+        return None
+
+    def _pode_adicionar_caractere_numerico(self, caractere: str) -> bool:
+        if caractere.isdigit():
+            return True
+        if caractere == '-' and len(self.texto) == 0:
+            return True
+        if caractere == '.' and '.' not in self.texto:
+            return True
+        return False
+
+    def desenhar(
+        self,
+        superficie: pygame.Surface,
+        fonte_rotulo: pygame.font.Font,
+        fonte_input: pygame.font.Font,
+    ) -> None:
+        superficie_rotulo = fonte_rotulo.render(self.rotulo, True, COR_TEXTO_SECUNDARIO)
+        superficie.blit(superficie_rotulo, (self.retangulo.x, self.retangulo.y - 24))
+
+        cor_borda = COR_INPUT_ATIVO if self.ativo else COR_BORDA_INPUT
+        pygame.draw.rect(superficie, COR_INPUT_FUNDO, self.retangulo, border_radius=8)
+        pygame.draw.rect(superficie, cor_borda, self.retangulo, width=2, border_radius=8)
+
+        superficie_texto = fonte_input.render(self.texto, True, COR_TEXTO)
+        y_texto = self.retangulo.y + (self.retangulo.height - superficie_texto.get_height()) // 2
+        superficie.blit(superficie_texto, (self.retangulo.x + 10, y_texto))
+
+
+class Botao:
+    def __init__(self, texto: str, retangulo: tuple[int, int, int, int]) -> None:
+        self.texto = texto
+        self.retangulo = pygame.Rect(retangulo)
+        self.hover = False
+
+    def tratar_evento(self, evento: pygame.event.Event) -> bool:
+        if evento.type == pygame.MOUSEMOTION:
+            self.hover = self.retangulo.collidepoint(evento.pos)
+
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            return bool(self.retangulo.collidepoint(evento.pos))
+        return False
+
+    def desenhar(self, superficie: pygame.Surface, fonte: pygame.font.Font) -> None:
+        cor = COR_BOTAO_HOVER if self.hover else COR_BOTAO
+        pygame.draw.rect(superficie, cor, self.retangulo, border_radius=10)
+
+        superficie_texto = fonte.render(self.texto, True, COR_TEXTO_BOTAO)
+        x_texto = self.retangulo.x + (self.retangulo.width - superficie_texto.get_width()) // 2
+        y_texto = self.retangulo.y + (self.retangulo.height - superficie_texto.get_height()) // 2
+        superficie.blit(superficie_texto, (x_texto, y_texto))
 
 
 class SmithWatermanUI:

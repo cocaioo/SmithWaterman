@@ -1,7 +1,7 @@
 """API publica do backend do projeto Smith-Waterman."""
 
 from .io_entrada import abrir_arquivo, parsear_entrada
-from .suite import executar_suite_alinhamento, smith_waterman
+from .alinhamento import executar_suite_alinhamento, smith_waterman
 
 __all__ = [
     'abrir_arquivo',
