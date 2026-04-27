@@ -7,9 +7,7 @@ Implementacao do algoritmo de Smith-Waterman desenvolvida na disciplina de Bioin
 - Calcula alinhamento global e local entre duas sequencias.
 - Exibe:
 	- matriz de score global
-	- matriz de ponteiros global
 	- matriz de score local
-	- matriz de ponteiros local
 - Mostra os alinhamentos resultantes e o melhor score.
 
 ## Estrutura do projeto
@@ -23,7 +21,7 @@ Smith-Waterman/
 	backend/
 		__init__.py
 		io_entrada.py          # leitura e parsing da entrada
-		alinhamento.py         # algoritmo completo (matrizes, ponteiros, traceback e suite)
+		alinhamento.py         # algoritmo completo (matrizes, traceback e suite)
 
 	frontend/
 		__init__.py

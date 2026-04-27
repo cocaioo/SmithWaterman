@@ -11,9 +11,7 @@ def _imprimir_resultado_terminal(
     resultado: dict[str, object],
 ) -> None:
     print(resultado['matriz_score_global'])
-    print(resultado['matriz_ponteiro_global'])
     print(resultado['matriz_score_local'])
-    print(resultado['matriz_ponteiro_local'])
 
     resumo = {
         'vertical_global': resultado['vertical_global'],

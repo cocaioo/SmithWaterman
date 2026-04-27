@@ -387,17 +387,9 @@ class SmithWatermanUI:
         )
         self._atualizar_linhas_com_matriz(
             linhas,
-            'Matriz de ponteiros global:',
-            resultado_alinhamento['matriz_ponteiro_global'],
-        )
-        self._atualizar_linhas_com_matriz(
-            linhas,
             'Matriz de score local:',
             resultado_alinhamento['matriz_score_local'],
         )
-
-        linhas.append('Matriz de ponteiros local:')
-        linhas.extend(matriz_para_linhas(resultado_alinhamento['matriz_ponteiro_local']))
         return linhas
 
     def _atualizar_status(self, texto: str, cor: tuple[int, int, int]) -> None:
