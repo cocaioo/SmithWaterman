@@ -11,7 +11,7 @@ class ParametrosPontuacao:
     penalidade_mismatch: float
     pontuacao_match: float
 
-
+#inicializar matriz ja com gaps
 def criar_matriz(linhas: int, colunas: int, inicial_global: bool, penalidade_gap: float):
     m = np.zeros((linhas, colunas), dtype=float)
     if inicial_global:
@@ -27,18 +27,16 @@ def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametro
     n_rows, n_cols = matriz.shape
     for i in range(1, n_rows):
         for j in range(1, n_cols):
-            cima = matriz[i - 1, j] + parametros.penalidade_gap
-            esquerda = matriz[i, j - 1] + parametros.penalidade_gap
+            cima = matriz[i - 1, j] + parametros.penalidade_gap #vizinho esquerda
+            esquerda = matriz[i, j - 1] + parametros.penalidade_gap #vizinho direita
             if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1]:
-                diagonal = matriz[i - 1, j - 1] + parametros.pontuacao_match
+                diagonal = matriz[i - 1, j - 1] + parametros.pontuacao_match #match
             else:
-                diagonal = matriz[i - 1, j - 1] + parametros.penalidade_mismatch
+                diagonal = matriz[i - 1, j - 1] + parametros.penalidade_mismatch #missmatch
 
-            if local:
-                melhor = max(0.0, diagonal, cima, esquerda)
-            else:
-                melhor = max(diagonal, cima, esquerda)
-            matriz[i, j] = float(melhor)
+            melhor = max(diagonal, cima, esquerda) #verifica o maior
+
+            matriz[i, j] = float(melhor) #inclui maior na matriz
     return matriz
 
 #saber quais vizinhos podem ter gerado aquele valor 
