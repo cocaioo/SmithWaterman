@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 import numpy as np
 
-TOLERANCIA = 1e-9
+TOLERANCIA = 1e-9 #devido a comparacao entre valores float 
 PREFERENCIA_DIRECOES = ('diagonal', 'cima', 'esquerda')
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True) #imutável
 class ParametrosPontuacao:
     penalidade_gap: float
     penalidade_mismatch: float
@@ -41,7 +41,7 @@ def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametro
             matriz[i, j] = float(melhor)
     return matriz
 
-
+#saber quais vizinhos podem ter gerado aquele valor 
 def _coletar_vizinhos_validos(matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros):
     """Retorna lista de candidatos válidos [(direcao, valor_vizinho, expected), ...]."""
     curr = float(matriz[i, j])
@@ -52,7 +52,7 @@ def _coletar_vizinhos_validos(matriz, i, j, sequencia_vertical, sequencia_horizo
         vi, vj = i - 1, j - 1
         val = float(matriz[vi, vj])
         expected = val + (parametros.pontuacao_match if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1] else parametros.penalidade_mismatch)
-        if np.isclose(expected, curr, atol=TOLERANCIA):
+        if np.isclose(expected, curr, atol=TOLERANCIA): #mt importante para evitar erro de tolerancia
             candidatos.append(('diagonal', val, expected))
 
     # cima
@@ -60,7 +60,7 @@ def _coletar_vizinhos_validos(matriz, i, j, sequencia_vertical, sequencia_horizo
         vi, vj = i - 1, j
         val = float(matriz[vi, vj])
         expected = val + parametros.penalidade_gap
-        if np.isclose(expected, curr, atol=TOLERANCIA):
+        if np.isclose(expected, curr, atol=TOLERANCIA): #mt importante para evitar erro de tolerancia
             candidatos.append(('cima', val, expected))
 
     # esquerda
@@ -68,7 +68,7 @@ def _coletar_vizinhos_validos(matriz, i, j, sequencia_vertical, sequencia_horizo
         vi, vj = i, j - 1
         val = float(matriz[vi, vj])
         expected = val + parametros.penalidade_gap
-        if np.isclose(expected, curr, atol=TOLERANCIA):
+        if np.isclose(expected, curr, atol=TOLERANCIA): #mt importante para evitar erro de tolerancia
             candidatos.append(('esquerda', val, expected))
 
     return candidatos
@@ -88,85 +88,68 @@ def _escolher_melhor_candidato(candidatos):
 
 
 def _escolher_direcao_ou_erro(matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros):
-    candidatos = _coletar_vizinhos_validos(matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros)
-    if candidatos:
-        return _escolher_melhor_candidato(candidatos)
+    candidatos = _coletar_vizinhos_validos(
+        matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros
+    )
 
-    # nenhum vizinho reproduz o valor atual -> erro detalhado
-    curr = float(matriz[i, j])
-    vizinhos = []
-    if i > 0 and j > 0:
-        v = float(matriz[i - 1, j - 1])
-        exp = v + (parametros.pontuacao_match if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1] else parametros.penalidade_mismatch)
-        vizinhos.append(('diagonal', (i - 1, j - 1), v, exp))
-    if i > 0:
-        v = float(matriz[i - 1, j])
-        exp = v + parametros.penalidade_gap
-        vizinhos.append(('cima', (i - 1, j), v, exp))
-    if j > 0:
-        v = float(matriz[i, j - 1])
-        exp = v + parametros.penalidade_gap
-        vizinhos.append(('esquerda', (i, j - 1), v, exp))
+    if not candidatos:
+        raise RuntimeError(f'Nenhum vizinho gera o valor atual em ({i}, {j})')
 
-    parts = [f"pos=({i},{j}) curr={curr}", "vizinhos:"]
-    for nome, (vi, vj), val, exp in vizinhos:
-        parts.append(f"  {nome} @({vi},{vj}) val={val} expected={exp}")
+    return _escolher_melhor_candidato(candidatos)
 
-    raise RuntimeError('Nenhum vizinho gera o valor atual. ' + '; '.join(parts))
+
+def _montar_alinhamento(matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j):
+    alinhada_v = []
+    alinhada_h = []
+
+    while i > 0 or j > 0:
+        if i == 0:
+            alinhada_v.append('-')
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            j -= 1
+            continue
+
+        if j == 0:
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append('-')
+            i -= 1
+            continue
+
+        direcao = _escolher_direcao_ou_erro(
+            matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros
+        )
+
+        if direcao == 'diagonal':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            i -= 1
+            j -= 1
+        elif direcao == 'cima':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append('-')
+            i -= 1
+        else:
+            alinhada_v.append('-')
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            j -= 1
+
+    return ''.join(reversed(alinhada_v)), ''.join(reversed(alinhada_h))
 
 
 def traceback_global(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     i = matriz.shape[0] - 1
     j = matriz.shape[1] - 1
-    alinhada_v = []
-    alinhada_h = []
 
-    while i > 0 or j > 0:
-        if i > 0 and j > 0:
-            direcao = _escolher_direcao_ou_erro(matriz, i, j, sequencia_vertical, sequencia_horizontal, parametros)
-            if direcao == 'diagonal':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                i -= 1
-                j -= 1
-            elif direcao == 'cima':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append('-')
-                i -= 1
-            elif direcao == 'esquerda':
-                alinhada_v.append('-')
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                j -= 1
-        elif i > 0:  # j == 0, só é possível mover para cima
-            # verificar consistência
-            val = float(matriz[i - 1, 0])
-            expected = val + parametros.penalidade_gap
-            if not np.isclose(expected, float(matriz[i, 0]), atol=TOLERANCIA):
-                raise RuntimeError(f"Inconsistencia na borda superior: pos=({i},0) curr={matriz[i,0]} cima_expected={expected}")
-            alinhada_v.append(sequencia_vertical[i - 1])
-            alinhada_h.append('-')
-            i -= 1
-        else:  # i == 0 and j > 0, só esquerda
-            val = float(matriz[0, j - 1])
-            expected = val + parametros.penalidade_gap
-            if not np.isclose(expected, float(matriz[0, j]), atol=TOLERANCIA):
-                raise RuntimeError(f"Inconsistencia na borda esquerda: pos=(0,{j}) curr={matriz[0,j]} esquerda_expected={expected}")
-            alinhada_v.append('-')
-            alinhada_h.append(sequencia_horizontal[j - 1])
-            j -= 1
-
-    alinhada_v.reverse()
-    alinhada_h.reverse()
-    return ''.join(alinhada_v), ''.join(alinhada_h)
+    return _montar_alinhamento(
+        matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j
+    )
 
 
 def traceback_local(matriz, sequencia_vertical, sequencia_horizontal, parametros):
-    # "local" aqui usa a matriz global.
-    # Começa no maior valor da última linha ou da última coluna.
-    candidatos = []
-
     ultima_linha = matriz.shape[0] - 1
     ultima_coluna = matriz.shape[1] - 1
+
+    candidatos = []
 
     for j in range(matriz.shape[1]):
         candidatos.append((float(matriz[ultima_linha, j]), ultima_linha, j))
@@ -176,48 +159,11 @@ def traceback_local(matriz, sequencia_vertical, sequencia_horizontal, parametros
 
     melhor_score, i, j = max(candidatos, key=lambda x: x[0])
 
-    alinhada_v = []
-    alinhada_h = []
+    alinhada_v, alinhada_h = _montar_alinhamento(
+        matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j
+    )
 
-    while i > 0 or j > 0:
-        if i > 0 and j > 0:
-            direcao = _escolher_direcao_ou_erro(
-                matriz,
-                i,
-                j,
-                sequencia_vertical,
-                sequencia_horizontal,
-                parametros
-            )
-
-            if direcao == 'diagonal':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                i -= 1
-                j -= 1
-            elif direcao == 'cima':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append('-')
-                i -= 1
-            elif direcao == 'esquerda':
-                alinhada_v.append('-')
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                j -= 1
-
-        elif i > 0:
-            alinhada_v.append(sequencia_vertical[i - 1])
-            alinhada_h.append('-')
-            i -= 1
-
-        else:
-            alinhada_v.append('-')
-            alinhada_h.append(sequencia_horizontal[j - 1])
-            j -= 1
-
-    alinhada_v.reverse()
-    alinhada_h.reverse()
-
-    return ''.join(alinhada_v), ''.join(alinhada_h), float(melhor_score)
+    return alinhada_v, alinhada_h, float(melhor_score)
 
 
 def construir_matriz_global(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
