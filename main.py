@@ -16,17 +16,16 @@ def _imprimir_resultado_terminal(
     resumo = {
         'vertical_global': resultado['vertical_global'],
         'horizontal_global': resultado['horizontal_global'],
+        'score_global': resultado.get('score_global'),
         'vertical_local': resultado['vertical_local'],
         'horizontal_local': resultado['horizontal_local'],
-        'melhor_vertical': resultado['melhor_vertical'],
-        'melhor_horizontal': resultado['melhor_horizontal'],
-        'melhor_score': resultado['melhor_score'],
+        'score_local': resultado.get('score_local'),
     }
     pprint(resumo)
 
 
-def executar_terminal(caminho_entrada: str = 'input.txt') -> None:
-    linhas_entrada = abrir_arquivo(caminho_entrada)
+def executar_terminal(caminho_arquivo_entrada: str = 'input.txt') -> None:
+    linhas_entrada = abrir_arquivo(caminho_arquivo_entrada)
     (
         sequencia_vertical,
         sequencia_horizontal,
@@ -45,7 +44,8 @@ def executar_terminal(caminho_entrada: str = 'input.txt') -> None:
     _imprimir_resultado_terminal(resultado)
 
 
-def executar_ui() -> None:
+def executar_ui():
+    """Abre a interface grafica do projeto."""
     SmithWatermanUI().executar()
 
 

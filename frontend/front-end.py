@@ -10,7 +10,7 @@ if str(RAIZ_PROJETO) not in sys.path:
 from frontend import SmithWatermanUI
 
 
-def main() -> None:
+def main():
     SmithWatermanUI().executar()
 
 

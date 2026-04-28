@@ -1,10 +1,8 @@
 """Interface pygame completa do projeto em um unico arquivo."""
 
 import sys
-from typing import Literal
 
 import numpy as np
-from numpy.typing import NDArray
 import pygame
 
 import backend
@@ -34,19 +32,20 @@ PADROES_FALLBACK = {
     'pontuacao_match': '1',
 }
 
-AcaoCampo = Literal['tab', 'enter']
 
-
-def _formatar_linha_inteira(linha: NDArray[np.generic]) -> str:
+def _formatar_linha_inteira(linha):
     return ' '.join(f'{int(valor):4d}' for valor in linha)
 
 
-def _formatar_linha_decimal(linha: NDArray[np.generic]) -> str:
+def _formatar_linha_decimal(linha):
     return ' '.join(f'{float(valor):7.1f}' for valor in linha)
 
 
-def matriz_para_linhas(matriz: NDArray[np.generic]) -> list[str]:
-    linhas_formatadas: list[str] = []
+def matriz_para_linhas(matriz):
+    linhas_formatadas = []
+
+    # 🔥 INVERTE A MATRIZ AQUI
+    matriz = matriz[::-1]
 
     if np.issubdtype(matriz.dtype, np.integer):
         for linha in matriz:
@@ -58,7 +57,7 @@ def matriz_para_linhas(matriz: NDArray[np.generic]) -> list[str]:
     return linhas_formatadas
 
 
-def carregar_padroes(caminho_entrada: str = 'input.txt') -> dict[str, str]:
+def carregar_padroes(caminho_entrada='input.txt'):
     try:
         linhas_entrada = backend.abrir_arquivo(caminho_entrada)
         (
@@ -83,18 +82,18 @@ def carregar_padroes(caminho_entrada: str = 'input.txt') -> dict[str, str]:
 class CampoEntrada:
     def __init__(
         self,
-        rotulo: str,
-        texto: str,
-        retangulo: tuple[int, int, int, int],
-        numerico: bool = False,
-    ) -> None:
+        rotulo,
+        texto,
+        retangulo,
+        numerico=False,
+    ):
         self.rotulo = rotulo
         self.texto = texto
         self.retangulo = pygame.Rect(retangulo)
         self.numerico = numerico
         self.ativo = False
 
-    def tratar_evento(self, evento: pygame.event.Event) -> AcaoCampo | None:
+    def tratar_evento(self, evento):
         if evento.type == pygame.MOUSEBUTTONDOWN:
             self.ativo = self.retangulo.collidepoint(evento.pos)
 
@@ -103,7 +102,7 @@ class CampoEntrada:
 
         return self._tratar_evento_teclado(evento)
 
-    def _tratar_evento_teclado(self, evento: pygame.event.Event) -> AcaoCampo | None:
+    def _tratar_evento_teclado(self, evento):
         if evento.key == pygame.K_BACKSPACE:
             self.texto = self.texto[:-1]
             return None
@@ -127,7 +126,7 @@ class CampoEntrada:
             self.texto += caractere.upper()
         return None
 
-    def _pode_adicionar_caractere_numerico(self, caractere: str) -> bool:
+    def _pode_adicionar_caractere_numerico(self, caractere):
         if caractere.isdigit():
             return True
         if caractere == '-' and len(self.texto) == 0:
@@ -138,10 +137,10 @@ class CampoEntrada:
 
     def desenhar(
         self,
-        superficie: pygame.Surface,
-        fonte_rotulo: pygame.font.Font,
-        fonte_input: pygame.font.Font,
-    ) -> None:
+        superficie,
+        fonte_rotulo,
+        fonte_input,
+    ):
         superficie_rotulo = fonte_rotulo.render(self.rotulo, True, COR_TEXTO_SECUNDARIO)
         superficie.blit(superficie_rotulo, (self.retangulo.x, self.retangulo.y - 24))
 
@@ -155,12 +154,12 @@ class CampoEntrada:
 
 
 class Botao:
-    def __init__(self, texto: str, retangulo: tuple[int, int, int, int]) -> None:
+    def __init__(self, texto, retangulo):
         self.texto = texto
         self.retangulo = pygame.Rect(retangulo)
         self.hover = False
 
-    def tratar_evento(self, evento: pygame.event.Event) -> bool:
+    def tratar_evento(self, evento):
         if evento.type == pygame.MOUSEMOTION:
             self.hover = self.retangulo.collidepoint(evento.pos)
 
@@ -168,7 +167,7 @@ class Botao:
             return bool(self.retangulo.collidepoint(evento.pos))
         return False
 
-    def desenhar(self, superficie: pygame.Surface, fonte: pygame.font.Font) -> None:
+    def desenhar(self, superficie, fonte):
         cor = COR_BOTAO_HOVER if self.hover else COR_BOTAO
         pygame.draw.rect(superficie, cor, self.retangulo, border_radius=10)
 
@@ -190,7 +189,7 @@ class SmithWatermanUI:
         'Use a roda do mouse para rolar o painel de saida.',
     ]
 
-    def __init__(self) -> None:
+    def __init__(self):
         pygame.init()
         pygame.display.set_caption('Smith-Waterman Interactive UI')
 
@@ -210,14 +209,14 @@ class SmithWatermanUI:
 
         self.painel_saida = pygame.Rect(20, 150, LARGURA_JANELA - 40, ALTURA_JANELA - 170)
 
-    def _inicializar_fontes(self) -> None:
+    def _inicializar_fontes(self):
         self.fonte_titulo = pygame.font.SysFont('Segoe UI', 32, bold=True)
         self.fonte_rotulo = pygame.font.SysFont('Segoe UI', 18)
         self.fonte_input = pygame.font.SysFont('Consolas', 22)
         self.fonte_botao = pygame.font.SysFont('Segoe UI', 20, bold=True)
         self.fonte_mono = pygame.font.SysFont('Consolas', 20)
 
-    def _criar_campos_entrada(self) -> list[CampoEntrada]:
+    def _criar_campos_entrada(self):
         padroes = carregar_padroes()
         especificacoes_campos = [
             ('Sequencia vertical', 'sequencia_vertical', (20, 70, 220, 42), False),
@@ -232,7 +231,7 @@ class SmithWatermanUI:
             for rotulo, chave, retangulo, numerico in especificacoes_campos
         ]
 
-    def executar(self) -> None:
+    def executar(self):
         em_execucao = True
 
         while em_execucao:
@@ -243,7 +242,7 @@ class SmithWatermanUI:
         pygame.quit()
         sys.exit(0)
 
-    def _processar_eventos(self) -> bool:
+    def _processar_eventos(self):
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 return False
@@ -256,7 +255,7 @@ class SmithWatermanUI:
 
         return True
 
-    def _processar_eventos_campos(self, evento: pygame.event.Event) -> None:
+    def _processar_eventos_campos(self, evento):
         for indice, campo_entrada in enumerate(self.campos_entrada):
             acao = campo_entrada.tratar_evento(evento)
             if acao == 'tab':
@@ -264,12 +263,12 @@ class SmithWatermanUI:
             elif acao == 'enter':
                 self.executar_alinhamento()
 
-    def _ativar_proximo_campo(self, indice_atual: int) -> None:
+    def _ativar_proximo_campo(self, indice_atual):
         self.campos_entrada[indice_atual].ativo = False
         proximo_indice = (indice_atual + 1) % len(self.campos_entrada)
         self.campos_entrada[proximo_indice].ativo = True
 
-    def _processar_scroll_e_atalhos(self, evento: pygame.event.Event) -> None:
+    def _processar_scroll_e_atalhos(self, evento):
         if evento.type == pygame.MOUSEWHEEL:
             self.deslocamento_scroll -= evento.y
             return
@@ -284,7 +283,7 @@ class SmithWatermanUI:
         elif evento.key == pygame.K_F5:
             self.executar_alinhamento()
 
-    def _ler_entrada_parametros(self) -> tuple[str, str, float, float, float]:
+    def _ler_entrada_parametros(self):
         sequencia_vertical = self.campos_entrada[self.INDICE_SEQUENCIA_VERTICAL].texto.strip().upper()
         sequencia_horizontal = self.campos_entrada[self.INDICE_SEQUENCIA_HORIZONTAL].texto.strip().upper()
         penalidade_gap = float(self.campos_entrada[self.INDICE_PENALIDADE_GAP].texto.strip())
@@ -300,11 +299,11 @@ class SmithWatermanUI:
         )
 
     @staticmethod
-    def _validar_sequencias(sequencia_vertical: str, sequencia_horizontal: str) -> None:
+    def _validar_sequencias(sequencia_vertical, sequencia_horizontal):
         if not sequencia_vertical or not sequencia_horizontal:
             raise ValueError('As sequencias nao podem ser vazias')
 
-    def executar_alinhamento(self) -> None:
+    def executar_alinhamento(self):
         try:
             (
                 sequencia_vertical,
@@ -338,24 +337,26 @@ class SmithWatermanUI:
 
     @staticmethod
     def _atualizar_linhas_com_matriz(
-        linhas: list[str],
-        titulo: str,
-        matriz: object,
-    ) -> None:
+        linhas,
+        titulo,
+        matriz,
+    ):
         linhas.append(titulo)
         linhas.extend(matriz_para_linhas(matriz))
         linhas.append('')
 
     def _montar_linhas_resultado(
         self,
-        resultado_alinhamento: dict[str, object],
-        sequencia_vertical: str,
-        sequencia_horizontal: str,
-        penalidade_gap: float,
-        penalidade_mismatch: float,
-        pontuacao_match: float,
-    ) -> list[str]:
-        melhor_score = float(resultado_alinhamento['melhor_score'])
+        resultado_alinhamento,
+        sequencia_vertical,
+        sequencia_horizontal,
+        penalidade_gap,
+        penalidade_mismatch,
+        pontuacao_match,
+    ):
+        score_global = float(resultado_alinhamento.get('score_global', 0.0))
+        score_local = float(resultado_alinhamento.get('score_local', 0.0))
+
         linhas = [
             'Resultado Smith-Waterman',
             '',
@@ -368,15 +369,12 @@ class SmithWatermanUI:
             'Alinhamento global',
             f"Vertical  : {resultado_alinhamento['vertical_global']}",
             f"Horizontal: {resultado_alinhamento['horizontal_global']}",
+            f'Score global: {score_global:.2f}',
             '',
             'Alinhamento local',
             f"Vertical  : {resultado_alinhamento['vertical_local']}",
             f"Horizontal: {resultado_alinhamento['horizontal_local']}",
-            '',
-            'Melhor alinhamento',
-            f"Vertical  : {resultado_alinhamento['melhor_vertical']}",
-            f"Horizontal: {resultado_alinhamento['melhor_horizontal']}",
-            f'Melhor score: {melhor_score:.2f}',
+            f'Score local: {score_local:.2f}',
             '',
         ]
 
@@ -392,11 +390,11 @@ class SmithWatermanUI:
         )
         return linhas
 
-    def _atualizar_status(self, texto: str, cor: tuple[int, int, int]) -> None:
+    def _atualizar_status(self, texto, cor):
         self.texto_status = texto
         self.cor_status = cor
 
-    def desenhar(self) -> None:
+    def desenhar(self):
         self.tela.fill(COR_FUNDO)
 
         superficie_cabecalho = self.fonte_titulo.render('Smith-Waterman Front-End', True, COR_TEXTO)
@@ -413,7 +411,7 @@ class SmithWatermanUI:
         self.desenhar_painel_saida()
         pygame.display.flip()
 
-    def desenhar_painel_saida(self) -> None:
+    def desenhar_painel_saida(self):
         pygame.draw.rect(self.tela, COR_PAINEL, self.painel_saida, border_radius=12)
         pygame.draw.rect(self.tela, COR_BORDA_INPUT, self.painel_saida, width=2, border_radius=12)
 

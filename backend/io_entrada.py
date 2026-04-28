@@ -3,6 +3,9 @@
 from collections.abc import Sequence
 
 
+ParametrosEntrada = tuple[str, str, float, float, float]
+
+
 def abrir_arquivo(caminho_arquivo: str) -> list[str]:
     """Retorna as linhas do arquivo de entrada mantendo a ordem original."""
     with open(caminho_arquivo, encoding='utf-8') as arquivo_entrada:
@@ -14,7 +17,7 @@ def _validar_quantidade_minima_linhas(linhas: Sequence[str]) -> None:
         raise ValueError('O arquivo de entrada deve conter ao menos 5 linhas.')
 
 
-def parsear_entrada(linhas: Sequence[str]) -> tuple[str, str, float, float, float]:
+def parsear_entrada(linhas: Sequence[str]) -> ParametrosEntrada:
     """Converte as 5 linhas esperadas em parametros para o algoritmo."""
     _validar_quantidade_minima_linhas(linhas)
 
