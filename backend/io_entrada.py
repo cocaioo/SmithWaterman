@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 
-ParametrosEntrada = tuple[str, str, float, float, float]
+ParametrosEntrada = tuple[str, str, float, float, float] #sequencia vertial, horizontal, gap, match, missmatch
 
 
 def abrir_arquivo(caminho_arquivo: str) -> list[str]:

@@ -378,6 +378,16 @@ class SmithWatermanUI:
             '',
         ]
 
+        # Se o backend retornou o alinhamento best-score, apenas exibir (não recalcular)
+        if 'vertical_bestscore' in resultado_alinhamento and 'horizontal_bestscore' in resultado_alinhamento:
+            linhas.extend([
+                'Alinhamento best-score',
+                f"Vertical  : {resultado_alinhamento.get('vertical_bestscore')}",
+                f"Horizontal: {resultado_alinhamento.get('horizontal_bestscore')}",
+                f"Score best: {float(resultado_alinhamento.get('score_bestscore', 0.0)):.2f}",
+                '',
+            ])
+
         self._atualizar_linhas_com_matriz(
             linhas,
             'Matriz de score global:',
@@ -388,6 +398,13 @@ class SmithWatermanUI:
             'Matriz de score local:',
             resultado_alinhamento['matriz_score_local'],
         )
+        # Matriz best-score (gerada pelo back-end quando disponível)
+        if 'matriz_bestscore' in resultado_alinhamento:
+            self._atualizar_linhas_com_matriz(
+                linhas,
+                'Matriz best-score:',
+                resultado_alinhamento['matriz_bestscore'],
+            )
         return linhas
 
     def _atualizar_status(self, texto, cor):
