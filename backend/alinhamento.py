@@ -39,12 +39,7 @@ def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametro
 
 
 def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizontal, parametros):
-    """Preenche a matriz de CÁLCULO do best-score (com sentinelas zeradas).
-
-    A matriz de cálculo tem dimensões lv+2 x lh+2; os índices 1..lv / 1..lh
-    correspondem aos caracteres. O preenchimento é feito bottom->up e
-    right->left e aplica piso em zero.
-    """
+    """Preenche a matriz de cálculo do best-score com sentinelas zeradas."""
     matriz = matriz_base.copy()
     n_rows, n_cols = matriz.shape
 
@@ -63,167 +58,172 @@ def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizo
     return matriz
 
 
-def _traceback_central(matriz, sequencia_vertical, sequencia_horizontal, parametros, tipo: str):
-    """Traceback centralizado para 'global', 'local' e 'best_score'.
+def _traceback_normal(matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j):
+    alinhada_v = []
+    alinhada_h = []
+    score_inicio = float(matriz[i, j])
 
-    - global: começa em (n_rows-1, n_cols-1); movimentos: diagonal(i-1,j-1), cima(i-1,j), esquerda(i,j-1); inverter ao final.
-    - local: começa na célula de MAIOR VALOR da ÚLTIMA COLUNA; mesmos movimentos de global; inverter ao final.
-    - best_score: começa no argmax da matriz de cálculo; movimentos: diagonal(i+1,j+1), baixo(i+1,j), direita(i,j+1); NÃO inverter.
+    while i > 0 or j > 0:
+        valor_atual = float(matriz[i, j])
 
-    Em cada passo recalcula os 3 caminhos possíveis, filtra os válidos (np.isclose) e escolhe o cujo vizinho tem MAIOR valor.
-    """
+        melhor_direcao = None
+        maior_vizinho = None
+
+        # diagonal: (i - 1, j - 1)
+        if i > 0 and j > 0:
+            vizinho = float(matriz[i - 1, j - 1])
+
+            if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1]:
+                esperado = vizinho + parametros.pontuacao_match
+            else:
+                esperado = vizinho + parametros.penalidade_mismatch
+
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                melhor_direcao = 'diagonal'
+                maior_vizinho = vizinho
+
+        # cima: (i - 1, j)
+        if i > 0:
+            vizinho = float(matriz[i - 1, j])
+            esperado = vizinho + parametros.penalidade_gap
+
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                if maior_vizinho is None or vizinho > maior_vizinho:
+                    melhor_direcao = 'cima'
+                    maior_vizinho = vizinho
+
+        # esquerda: (i, j - 1)
+        if j > 0:
+            vizinho = float(matriz[i, j - 1])
+            esperado = vizinho + parametros.penalidade_gap
+
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                if maior_vizinho is None or vizinho > maior_vizinho:
+                    melhor_direcao = 'esquerda'
+                    maior_vizinho = vizinho
+
+        if melhor_direcao is None:
+            break
+
+        if melhor_direcao == 'diagonal':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            i -= 1
+            j -= 1
+
+        elif melhor_direcao == 'cima':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append('-')
+            i -= 1
+
+        else:  # esquerda
+            alinhada_v.append('-')
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            j -= 1
+
+    return _finalizar_alinhamento(alinhada_v, alinhada_h, score_inicio, inverter=True)
+
+def _traceback_bestscore_calculo(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     n_rows, n_cols = matriz.shape
 
-    if tipo == 'global':
-        i = n_rows - 1
-        j = n_cols - 1
-        reverse_at_end = True
-    elif tipo == 'local':
-        j = n_cols - 1
-        col_vals = np.array(matriz[:, j], dtype=float)
-        i = int(np.argmax(col_vals))
-        reverse_at_end = True
-    elif tipo == 'best_score':
-        best_idx = np.unravel_index(np.argmax(matriz), matriz.shape)
-        i, j = int(best_idx[0]), int(best_idx[1])
-        reverse_at_end = False
-    else:
-        raise ValueError(f"tipo inválido para traceback: {tipo}")
+    best_idx = np.unravel_index(np.argmax(matriz), matriz.shape)
+    i, j = int(best_idx[0]), int(best_idx[1])
 
     alinhada_v = []
     alinhada_h = []
     score_inicio = float(matriz[i, j])
 
-    if tipo in ('global', 'local'):
-        while i > 0 or j > 0:
-            curr = float(matriz[i, j])
-            candidatos = []
+    while 0 <= i < n_rows and 0 <= j < n_cols:
+        valor_atual = float(matriz[i, j])
 
-            # diagonal (i-1, j-1)
-            if i > 0 and j > 0:
-                vi, vj = i - 1, j - 1
-                val = float(matriz[vi, vj])
-                esperado = val + (parametros.pontuacao_match if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1] else parametros.penalidade_mismatch)
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'diagonal'))
+        if valor_atual <= TOLERANCIA:
+            break
 
-            # cima (i-1, j)
-            if i > 0:
-                vi, vj = i - 1, j
-                val = float(matriz[vi, vj])
-                esperado = val + parametros.penalidade_gap
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'cima'))
+        melhor_direcao = None
+        maior_vizinho = None
 
-            # esquerda (i, j-1)
-            if j > 0:
-                vi, vj = i, j - 1
-                val = float(matriz[vi, vj])
-                esperado = val + parametros.penalidade_gap
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'esquerda'))
+        # diagonal: (i + 1, j + 1)
+        if i + 1 < n_rows and j + 1 < n_cols:
+            vizinho = float(matriz[i + 1, j + 1])
 
-            if not candidatos:
-                break
+            if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1]:
+                esperado = vizinho + parametros.pontuacao_match
+            else:
+                esperado = vizinho + parametros.penalidade_mismatch
 
-            # escolher apenas pelo maior valor do vizinho
-            val_chosen, vi_chosen, vj_chosen, direcao = max(candidatos, key=lambda x: x[0])
+            esperado = max(0.0, esperado)
 
-            if direcao == 'diagonal':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                i -= 1
-                j -= 1
-            elif direcao == 'cima':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append('-')
-                i -= 1
-            else:  # esquerda
-                alinhada_v.append('-')
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                j -= 1
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                melhor_direcao = 'diagonal'
+                maior_vizinho = vizinho
 
-    else:
-        # best_score: movimentos para frente
-        while 0 <= i < n_rows and 0 <= j < n_cols:
-            curr = float(matriz[i, j])
-            if curr <= TOLERANCIA:
-                break
+        # baixo: (i + 1, j)
+        if i + 1 < n_rows:
+            vizinho = float(matriz[i + 1, j])
+            esperado = max(0.0, vizinho + parametros.penalidade_gap)
 
-            candidatos = []
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                if maior_vizinho is None or vizinho > maior_vizinho:
+                    melhor_direcao = 'baixo'
+                    maior_vizinho = vizinho
 
-            # diagonal (i+1, j+1)
-            if i + 1 < n_rows and j + 1 < n_cols:
-                vi, vj = i + 1, j + 1
-                val = float(matriz[vi, vj])
-                calc = val + (parametros.pontuacao_match if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1] else parametros.penalidade_mismatch)
-                esperado = calc if calc >= 0 else 0.0
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'diagonal'))
+        # direita: (i, j + 1)
+        if j + 1 < n_cols:
+            vizinho = float(matriz[i, j + 1])
+            esperado = max(0.0, vizinho + parametros.penalidade_gap)
 
-            # baixo (i+1, j)
-            if i + 1 < n_rows:
-                vi, vj = i + 1, j
-                val = float(matriz[vi, vj])
-                calc = val + parametros.penalidade_gap
-                esperado = calc if calc >= 0 else 0.0
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'baixo'))
+            if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
+                if maior_vizinho is None or vizinho > maior_vizinho:
+                    melhor_direcao = 'direita'
+                    maior_vizinho = vizinho
 
-            # direita (i, j+1)
-            if j + 1 < n_cols:
-                vi, vj = i, j + 1
-                val = float(matriz[vi, vj])
-                calc = val + parametros.penalidade_gap
-                esperado = calc if calc >= 0 else 0.0
-                if np.isclose(esperado, curr, atol=TOLERANCIA):
-                    candidatos.append((val, vi, vj, 'direita'))
+        if melhor_direcao is None:
+            break
 
-            if not candidatos:
-                break
+        if melhor_direcao == 'diagonal':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            i += 1
+            j += 1
 
-            val_chosen, vi_chosen, vj_chosen, direcao = max(candidatos, key=lambda x: x[0])
+        elif melhor_direcao == 'baixo':
+            alinhada_v.append(sequencia_vertical[i - 1])
+            alinhada_h.append('-')
+            i += 1
 
-            if direcao == 'diagonal':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                i += 1
-                j += 1
-            elif direcao == 'baixo':
-                alinhada_v.append(sequencia_vertical[i - 1])
-                alinhada_h.append('-')
-                i += 1
-            else:  # direita
-                alinhada_v.append('-')
-                alinhada_h.append(sequencia_horizontal[j - 1])
-                j += 1
+        else:  # direita
+            alinhada_v.append('-')
+            alinhada_h.append(sequencia_horizontal[j - 1])
+            j += 1
 
-    if reverse_at_end:
-        return ''.join(reversed(alinhada_v)), ''.join(reversed(alinhada_h)), float(score_inicio)
-    return ''.join(alinhada_v), ''.join(alinhada_h), float(score_inicio)
+    return _finalizar_alinhamento(alinhada_v, alinhada_h, score_inicio)
+def _finalizar_alinhamento(alinhada_v, alinhada_h, score, inverter: bool = False):
+    if inverter:
+        alinhada_v = reversed(alinhada_v)
+        alinhada_h = reversed(alinhada_h)
+
+    return ''.join(alinhada_v), ''.join(alinhada_h), float(score)
 
 
 def traceback_global(matriz, sequencia_vertical, sequencia_horizontal, parametros):
-    v, h, _ = _traceback_central(matriz, sequencia_vertical, sequencia_horizontal, parametros, 'global')
-    return v, h
+    ultima_linha = matriz.shape[0] - 1
+    ultima_coluna = matriz.shape[1] - 1
+    return _traceback_normal(matriz, sequencia_vertical, sequencia_horizontal, parametros, ultima_linha, ultima_coluna)
 
 
 def traceback_local(matriz, sequencia_vertical, sequencia_horizontal, parametros):
-    v, h, score = _traceback_central(matriz, sequencia_vertical, sequencia_horizontal, parametros, 'local')
-    return v, h, float(score)
+    ultima_coluna = matriz.shape[1] - 1
+    coluna = np.array(matriz[:, ultima_coluna], dtype=float)
+    linha_maior = int(np.argmax(coluna))
+    return _traceback_normal(matriz, sequencia_vertical, sequencia_horizontal, parametros, linha_maior, ultima_coluna)
 
 
 def traceback_bestscore(matriz, sequencia_vertical, sequencia_horizontal, parametros):
-    v, h, score = _traceback_central(matriz, sequencia_vertical, sequencia_horizontal, parametros, 'best_score')
-    return v, h, float(score)
+    return _traceback_bestscore_calculo(matriz, sequencia_vertical, sequencia_horizontal, parametros)
 
 
 def preparar_matriz_bestscore_para_exibicao(matriz_bestscore_calculo, penalidade_gap):
-    """Prepara matriz visual do best-score copiando o miolo da matriz de cálculo.
-
-    - matriz_bestscore_calculo: dimensões lv+2 x lh+2
-    - retorna visual: dimensões lv+1 x lh+1, com gaps cumulativos nas bordas
-    """
+    """Gera a matriz best-score visual com gaps nas bordas."""
     n_rows_calc, n_cols_calc = matriz_bestscore_calculo.shape
     lv = n_rows_calc - 2
     lh = n_cols_calc - 2
@@ -260,18 +260,6 @@ def construir_matriz_global(sequencia_vertical, sequencia_horizontal, penalidade
     return preencher_matriz(m, sequencia_vertical, sequencia_horizontal, parametros)
 
 
-def smith_waterman(matriz_score, penalidade_gap, penalidade_mismatch, pontuacao_match, sequencia_vertical, sequencia_horizontal):
-    """Compatibilidade: retorna a matriz local (inicializada sem gaps cumulativos nas bordas).
-
-    O parâmetro `matriz_score` é ignorado; função mantida para compatibilidade com API antiga.
-    """
-    _ = matriz_score
-    parametros = ParametrosPontuacao(penalidade_gap=penalidade_gap, penalidade_mismatch=penalidade_mismatch, pontuacao_match=pontuacao_match)
-    linhas = len(sequencia_vertical) + 1
-    colunas = len(sequencia_horizontal) + 1
-    m = criar_matriz(linhas, colunas, inicial_global=False, penalidade_gap=parametros.penalidade_gap)
-    return preencher_matriz(m, sequencia_vertical, sequencia_horizontal, parametros)
-
 
 def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
     parametros = ParametrosPontuacao(
@@ -299,7 +287,7 @@ def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalid
         parametros.pontuacao_match,
     )
 
-    vertical_global, horizontal_global = traceback_global(
+    vertical_global, horizontal_global, score_global = traceback_global(
         m_global, sequencia_vertical, sequencia_horizontal, parametros
     )
 
@@ -312,8 +300,6 @@ def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalid
     )
 
     matriz_best_visual = preparar_matriz_bestscore_para_exibicao(matriz_best_calculo, parametros.penalidade_gap)
-
-    score_global = float(m_global[-1, -1])
 
     return {
         'vertical_global': vertical_global,

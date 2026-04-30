@@ -1,88 +1,16 @@
-# Smith-Waterman (Python)
+# Smith-Waterman
 
-Implementacao do algoritmo de Smith-Waterman desenvolvida na disciplina de Bioinformatica da UFPI, com execucao unificada pelo arquivo main.py.
+## Descrição
+Implementação do alinhamento de sequências com Smith-Waterman.
 
-## O que este projeto faz
+## Entrada
+O programa lê `input.txt`. O arquivo deve ter 5 linhas:
 
-- Calcula alinhamento global e local entre duas sequencias.
-- Exibe:
-	- matriz de score global
-	- matriz de score local
-- Mostra os alinhamentos resultantes e o melhor score.
-
-## Estrutura do projeto
-
-```text
-Smith-Waterman/
-	main.py                  # entrypoint unico (ui e terminal)
-	input.txt                # entrada padrao
-	readme.md
-
-	backend/
-		__init__.py
-		io_entrada.py          # leitura e parsing da entrada
-		alinhamento.py         # algoritmo completo (matrizes, traceback e suite)
-
-	frontend/
-		__init__.py
-		aplicacao.py           # UI completa (constantes, widgets, formatacao e tela)
-		front-end.py           # atalho opcional para UI
-```
-
-## Requisitos
-
-- Python 3.10+
-- Dependencias:
-	- numpy
-	- pygame
-
-Instalacao:
-
-```bash
-pip install numpy pygame
-```
-
-## Como executar
-
-### 1) Interface grafica (padrao)
-
-```bash
-python main.py
-```
-
-No Windows, se necessario:
-
-```bash
-py main.py
-```
-
-### 2) Modo terminal
-
-```bash
-python main.py --modo terminal
-```
-
-Com arquivo customizado:
-
-```bash
-python main.py --modo terminal --entrada input.txt
-```
-
-### 3) Atalho legado para UI (opcional)
-
-```bash
-python frontend/front-end.py
-```
-
-## Formato do input.txt
-
-O arquivo [input.txt](input.txt) deve conter 5 linhas:
-
-1. sequencia vertical
-2. sequencia horizontal
-3. penalidade de gap
-4. penalidade de mismatch
-5. pontuacao de match
+1. sequência vertical
+2. sequência horizontal
+3. penalidade de gap (número)
+4. penalidade de mismatch (número)
+5. pontuação de match (número)
 
 Exemplo:
 
@@ -94,8 +22,66 @@ TTGA
 1
 ```
 
-## Observacoes
+## Execução
 
-- [main.py](main.py) e o entrypoint principal e unificado para todos os modos.
-- [frontend/front-end.py](frontend/front-end.py) foi mantido apenas como atalho de compatibilidade para a UI.
-- A estrutura foi simplificada para manter somente modulos com responsabilidade clara e leitura linear.
+Interface gráfica (padrão):
+
+```bash
+python main.py
+```
+
+No Windows:
+
+```bash
+py main.py
+```
+
+Modo terminal:
+
+```bash
+python main.py --modo terminal
+```
+
+Com arquivo customizado:
+
+```bash
+python main.py --modo terminal --entrada input.txt
+```
+
+Atalho opcional para UI:
+
+```bash
+python frontend/front-end.py
+```
+
+## Saída
+A execução produz matrizes de score e alinhamentos.
+O resultado retornado por `executar_suite_alinhamento` contém, entre outras, estas chaves:
+
+- `matriz_score_global`, `matriz_score_local`, `matriz_bestscore`
+- `vertical_global`, `horizontal_global`, `score_global`
+- `vertical_local`, `horizontal_local`, `score_local`
+- `vertical_bestscore`, `horizontal_bestscore`, `score_bestscore`
+
+No modo terminal, `main.py` imprime as matrizes e um resumo dos alinhamentos global e local.
+
+## Estrutura
+
+Principais arquivos:
+
+- `main.py` — entrypoint (UI e terminal)
+- `input.txt` — arquivo de entrada padrão
+- `backend/io_entrada.py` — leitura e parsing
+- `backend/alinhamento.py` — algoritmo e tracebacks
+- `frontend/aplicacao.py` — interface gráfica
+
+## Requisitos
+
+- Python 3.10+
+- `numpy`, `pygame`
+
+Instalação:
+
+```bash
+pip install numpy pygame
+```
