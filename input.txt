@@ -1,5 +1,5 @@
-ATCTC
-ACT
+CTATG
+TAT
 -2
 -1
 1
