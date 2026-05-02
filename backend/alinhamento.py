@@ -3,12 +3,12 @@ import numpy as np
 
 TOLERANCIA = 1e-9  # devido a comparacao entre valores float
 
-
 @dataclass(frozen=True)
 class ParametrosPontuacao:
     penalidade_gap: float
     penalidade_mismatch: float
     pontuacao_match: float
+
 def criar_matriz(linhas: int, colunas: int, inicial_global: bool, penalidade_gap: float):
     m = np.zeros((linhas, colunas), dtype=float)
     if inicial_global:
@@ -37,7 +37,6 @@ def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametro
 
 
 def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizontal, parametros):
-    """Preenche a matriz de cálculo do best-score com sentinelas zeradas."""
     matriz = matriz_base.copy()
     n_rows, n_cols = matriz.shape
     for i in range(n_rows - 2, 0, -1):
@@ -121,7 +120,6 @@ def traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, pa
 
     return finalizar_alinhamento(alinhada_v, alinhada_h, score_inicio, inverter=True)
 
-# bestscore traceback logic moved to the explicit function `traceback_bestscore` below
 def finalizar_alinhamento(alinhada_v, alinhada_h, score, inverter: bool = False):
     if inverter:
         v = ''.join(reversed(alinhada_v))
@@ -132,19 +130,16 @@ def finalizar_alinhamento(alinhada_v, alinhada_h, score, inverter: bool = False)
 
     return v, h, float(score)
 
-
 def traceback_global(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     ultima_linha = matriz.shape[0] - 1
     ultima_coluna = matriz.shape[1] - 1
     return traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, parametros, ultima_linha, ultima_coluna)
-
 
 def traceback_local(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     ultima_coluna = matriz.shape[1] - 1
     coluna = np.array(matriz[:, ultima_coluna], dtype=float)
     linha_maior = int(np.argmax(coluna))
     return traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, parametros, linha_maior, ultima_coluna)
-
 
 def traceback_bestscore(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     """Reconstrói o alinhamento a partir do melhor score na matriz (modo local).
@@ -221,7 +216,6 @@ def traceback_bestscore(matriz, sequencia_vertical, sequencia_horizontal, parame
 
     return finalizar_alinhamento(alinhada_v, alinhada_h, score_inicio)
 
-
 def preparar_matriz_bestscore_para_exibicao(matriz_bestscore_calculo, penalidade_gap):
     """Gera a matriz best-score visual com gaps nas bordas."""
     n_rows_calc, n_cols_calc = matriz_bestscore_calculo.shape
@@ -235,7 +229,6 @@ def preparar_matriz_bestscore_para_exibicao(matriz_bestscore_calculo, penalidade
 
     return visual
 
-
 def construir_matriz_bestscore(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
     parametros = ParametrosPontuacao(
         penalidade_gap=penalidade_gap,
@@ -247,7 +240,6 @@ def construir_matriz_bestscore(sequencia_vertical, sequencia_horizontal, penalid
     matriz_base = np.zeros((linhas, colunas), dtype=float)
     return preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizontal, parametros)
 
-
 def construir_matriz_global(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
     parametros = ParametrosPontuacao(
         penalidade_gap=penalidade_gap,
@@ -258,8 +250,6 @@ def construir_matriz_global(sequencia_vertical, sequencia_horizontal, penalidade
     colunas = len(sequencia_horizontal) + 1
     m = criar_matriz(linhas, colunas, inicial_global=True, penalidade_gap=parametros.penalidade_gap)
     return preencher_matriz(m, sequencia_vertical, sequencia_horizontal, parametros)
-
-
 
 def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
     parametros = ParametrosPontuacao(
@@ -276,8 +266,7 @@ def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalid
         parametros.pontuacao_match,
     )
 
-    # local reuse global as required
-    m_local = m_global
+    m_local = m_global #A matriz é igual, só muda o traceback
 
     matriz_best_calculo = construir_matriz_bestscore(
         sequencia_vertical,
