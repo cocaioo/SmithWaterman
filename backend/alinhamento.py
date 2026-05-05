@@ -60,7 +60,7 @@ def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizo
     return matriz
 
 
-def traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j):
+def traceback_global_local(matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j):
     """Reconstrói alinhamento (global/local) a partir da posição (i, j).
 
     Retorna (alinhada_vertical, alinhada_horizontal, score_inicial).
@@ -141,13 +141,13 @@ def finalizar_alinhamento(alinhada_v, alinhada_h, score, inverter: bool = False)
 def traceback_global(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     ultima_linha = matriz.shape[0] - 1
     ultima_coluna = matriz.shape[1] - 1
-    return traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, parametros, ultima_linha, ultima_coluna)
+    return traceback_global_local(matriz, sequencia_vertical, sequencia_horizontal, parametros, ultima_linha, ultima_coluna)
 
 def traceback_local(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     ultima_coluna = matriz.shape[1] - 1
     coluna = np.array(matriz[:, ultima_coluna], dtype=float)
     linha_maior = int(np.argmax(coluna))
-    return traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, parametros, linha_maior, ultima_coluna)
+    return traceback_global_local(matriz, sequencia_vertical, sequencia_horizontal, parametros, linha_maior, ultima_coluna)
 
 def traceback_bestscore(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     """Reconstrói o alinhamento local a partir do maior score da matriz.
