@@ -16,7 +16,6 @@ def criar_matriz(linhas: int, colunas: int, inicial_global: bool, penalidade_gap
         m[0, :] = np.arange(colunas) * penalidade_gap
     return m
 
-
 def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametros):
     """Preenche matriz (global/local) padrão, acumulando gaps nas bordas quando já inicializada."""
     n_rows, n_cols = matriz.shape
@@ -34,7 +33,6 @@ def preencher_matriz(matriz, sequencia_vertical, sequencia_horizontal, parametro
             matriz[i, j] = float(max(vindo_de_diagonal, vindo_de_cima, vindo_de_esquerda))
 
     return matriz
-
 
 def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizontal, parametros):
     matriz = matriz_base.copy()
@@ -58,7 +56,6 @@ def preencher_matriz_bestscore(matriz_base, sequencia_vertical, sequencia_horizo
             ))
 
     return matriz
-
 
 def traceback_global_local(matriz, sequencia_vertical, sequencia_horizontal, parametros, i, j):
     """Reconstrói alinhamento (global/local) a partir da posição (i, j).
