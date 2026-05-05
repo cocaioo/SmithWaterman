@@ -62,23 +62,25 @@ def traceback_from_position(matriz, sequencia_vertical, sequencia_horizontal, pa
     alinhada_v = []
     alinhada_h = []
     score_inicio = float(matriz[i, j])
+    #Refaz o calculo para checar de onde veio
 
     while i > 0 or j > 0:
-        valor_atual = float(matriz[i, j])
+        valor_atual = float(matriz[i, j]) #score da celula atual
 
-        direcao = None
+        direcao = None #guarda onde o algoritmo decidiu voltar
         maior_vizinho = None
 
         # diagonal: (i - 1, j - 1)
-        if i > 0 and j > 0:
+        if i > 0 and j > 0: #Só pode ir para diagonal se não estiver na primeira linha nem na primeira coluna.
             vizinho = float(matriz[i - 1, j - 1])
+
             if sequencia_vertical[i - 1] == sequencia_horizontal[j - 1]:
                 esperado = vizinho + parametros.pontuacao_match
             else:
                 esperado = vizinho + parametros.penalidade_mismatch
 
             if np.isclose(esperado, valor_atual, atol=TOLERANCIA):
-                direcao = 'diagonal'
+                direcao = 'diagonal' #se o valor atual vem da diagonal
                 maior_vizinho = vizinho
 
         # cima: (i - 1, j)
