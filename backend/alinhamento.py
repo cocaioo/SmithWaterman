@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import sys
 import numpy as np
 
 TOLERANCIA = 1e-9  # devido a comparacao entre valores float
@@ -221,6 +222,87 @@ def traceback_bestscore(matriz, sequencia_vertical, sequencia_horizontal, parame
 def preparar_matriz_bestscore_para_exibicao(matriz_bestscore_calculo, penalidade_gap):
     return matriz_bestscore_calculo
 
+
+def _formatar_linha_inteira(linha):
+    return ' '.join(f'{int(valor):4d}' for valor in linha)
+
+
+def _formatar_linha_decimal(linha):
+    return ' '.join(f'{float(valor):7.1f}' for valor in linha)
+
+
+def matriz_para_linhas(matriz):
+    linhas_formatadas = []
+
+    # inverter a matriz para exibição (como no front-end)
+    matriz = matriz[::-1]
+
+    if np.issubdtype(matriz.dtype, np.integer):
+        for linha in matriz:
+            linhas_formatadas.append(_formatar_linha_inteira(linha))
+        return linhas_formatadas
+
+    for linha in matriz:
+        linhas_formatadas.append(_formatar_linha_decimal(linha))
+    return linhas_formatadas
+
+
+def _formatar_resultado_para_linhas(
+    resultado_alinhamento,
+    sequencia_vertical,
+    sequencia_horizontal,
+    penalidade_gap,
+    penalidade_mismatch,
+    pontuacao_match,
+):
+    score_global = float(resultado_alinhamento.get('score_global', 0.0))
+    score_local = float(resultado_alinhamento.get('score_local', 0.0))
+
+    linhas = [
+        'Resultado Smith-Waterman',
+        '',
+        f'Sequencia vertical  : {sequencia_vertical}',
+        f'Sequencia horizontal: {sequencia_horizontal}',
+        f'Penalidade gap      : {penalidade_gap}',
+        f'Penalidade mismatch : {penalidade_mismatch}',
+        f'Pontuacao match     : {pontuacao_match}',
+        '',
+        'Alinhamento global',
+        f"Vertical  : {resultado_alinhamento['vertical_global']}",
+        f"Horizontal: {resultado_alinhamento['horizontal_global']}",
+        f'Score global: {score_global:.2f}',
+        '',
+        'Alinhamento local',
+        f"Vertical  : {resultado_alinhamento['vertical_local']}",
+        f"Horizontal: {resultado_alinhamento['horizontal_local']}",
+        f'Score local: {score_local:.2f}',
+        '',
+    ]
+
+    if 'vertical_bestscore' in resultado_alinhamento and 'horizontal_bestscore' in resultado_alinhamento:
+        linhas.extend([
+            'Alinhamento best-score',
+            f"Vertical  : {resultado_alinhamento.get('vertical_bestscore')}",
+            f"Horizontal: {resultado_alinhamento.get('horizontal_bestscore')}",
+            f"Score best: {float(resultado_alinhamento.get('score_bestscore', 0.0)):.2f}",
+            '',
+        ])
+
+    linhas.append('Matriz de score global:')
+    linhas.extend(matriz_para_linhas(resultado_alinhamento['matriz_score_global']))
+    linhas.append('')
+
+    linhas.append('Matriz de score local:')
+    linhas.extend(matriz_para_linhas(resultado_alinhamento['matriz_score_local']))
+    linhas.append('')
+
+    if 'matriz_bestscore' in resultado_alinhamento:
+        linhas.append('Matriz best-score:')
+        linhas.extend(matriz_para_linhas(resultado_alinhamento['matriz_bestscore']))
+        linhas.append('')
+
+    return linhas
+
 def construir_matriz_bestscore(sequencia_vertical, sequencia_horizontal, penalidade_gap, penalidade_mismatch, pontuacao_match):
     parametros = ParametrosPontuacao(
         penalidade_gap=penalidade_gap,
@@ -289,7 +371,7 @@ def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalid
 
     matriz_best_visual = preparar_matriz_bestscore_para_exibicao(matriz_best_calculo, parametros.penalidade_gap)
 
-    return {
+    resultado = {
         'vertical_global': vertical_global,
         'horizontal_global': horizontal_global,
         'score_global': score_global,
@@ -303,3 +385,25 @@ def executar_suite_alinhamento(sequencia_vertical, sequencia_horizontal, penalid
         'matriz_score_local': m_local,
         'matriz_bestscore': matriz_best_visual,
     }
+
+    # Imprime no terminal uma representação igual ao que o front-end exibe (duas vias)
+    try:
+        linhas_saida = _formatar_resultado_para_linhas(
+            resultado,
+            sequencia_vertical,
+            sequencia_horizontal,
+            parametros.penalidade_gap,
+            parametros.penalidade_mismatch,
+            parametros.pontuacao_match,
+        )
+        for linha in linhas_saida:
+            print(linha)
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+    except Exception:
+        # Não falhar o algoritmo apenas por falha na impressão
+        pass
+
+    return resultado
